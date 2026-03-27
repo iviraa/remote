@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Remote</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    background: #050505;
+    color: #e0e0e0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+    position: relative;
+  }
+
+  /* Gradient glow */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 25% 45%, rgba(255,60,40,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse at 75% 30%, rgba(255,77,77,0.10) 0%, transparent 45%),
+      radial-gradient(ellipse at 55% 80%, rgba(255,107,61,0.07) 0%, transparent 45%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Grain — only visible where gradient is */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='300' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.5'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    background-repeat: repeat;
+    opacity: 0.4;
+    mask-image:
+      radial-gradient(ellipse at 25% 45%, black 0%, transparent 60%),
+      radial-gradient(ellipse at 75% 30%, black 0%, transparent 50%),
+      radial-gradient(ellipse at 55% 80%, black 0%, transparent 50%);
+    -webkit-mask-image:
+      radial-gradient(ellipse at 25% 45%, black 0%, transparent 60%),
+      radial-gradient(ellipse at 75% 30%, black 0%, transparent 50%),
+      radial-gradient(ellipse at 55% 80%, black 0%, transparent 50%);
+  }
+
+  .main { display: flex; flex: 1; overflow: hidden; position: relative; z-index: 1; }
+
+  /* ══════ REMOTE ══════ */
+  .remote-wrap {
+    width: 250px;
+    min-width: 250px;
+    height: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 16px 12px 10px;
+    -webkit-app-region: drag;
+  }
+
+  .remote {
+    width: 210px;
+    background: linear-gradient(175deg, #1e1e1e 0%, #141414 30%, #0e0e0e 70%, #111 100%);
+    border-radius: 32px;
+    padding: 20px 18px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    box-shadow:
+      8px 12px 40px rgba(0,0,0,0.7),
+      -2px -2px 8px rgba(255,255,255,0.02),
+      inset 0 1px 0 rgba(255,255,255,0.06),
+      inset 0 -1px 0 rgba(0,0,0,0.5);
+    border: 0.5px solid rgba(255,255,255,0.05);
+    -webkit-app-region: no-drag;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .remote::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -20%;
+    width: 60%; height: 100%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  /* Top: IR and Power symmetric */
+  .remote-top {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+  }
+
+  .ir-led {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #1a0808;
+    border: 1px solid rgba(255,255,255,0.03);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.8);
+    transition: all 0.12s;
+  }
+
+  .ir-led.glow {
+    background: #FF4D4D;
+    border-color: rgba(255,77,77,0.3);
+    box-shadow:
+      0 0 4px rgba(255,77,77,0.9),
+      0 0 12px rgba(255,77,77,0.5),
+      0 0 24px rgba(255,77,77,0.2);
+  }
+
+  .pwr {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 13px;
+    background: linear-gradient(160deg, #281818, #180e0e);
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.6),
+      0 0 6px rgba(255,77,77,0.05),
+      inset 0 1px 0 rgba(255,80,80,0.1),
+      inset 0 -1px 0 rgba(0,0,0,0.4);
+  }
+
+  .pwr:hover {
+    color: #FF4D4D;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.7), 0 0 14px rgba(255,77,77,0.15), inset 0 1px 0 rgba(255,80,80,0.15);
+  }
+
+  .pwr:active, .pwr.flash {
+    box-shadow: 0 0 20px rgba(255,77,77,0.3), inset 0 2px 4px rgba(0,0,0,0.5) !important;
+  }
+
+  /* ── Button base ── */
+  .b {
+    border: none; color: #ccc; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    background: linear-gradient(160deg, #2c2c2c, #1a1a1a);
+    box-shadow:
+      0 3px 6px rgba(0,0,0,0.6),
+      0 1px 2px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.09),
+      inset 0 -1px 0 rgba(0,0,0,0.4);
+    transition: all 0.08s ease;
+  }
+
+  .b:hover {
+    background: linear-gradient(160deg, #363636, #222);
+    color: #fff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.4);
+  }
+
+  .b:active, .b.flash {
+    background: linear-gradient(160deg, #1a1a1a, #252525) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.5) !important;
+    color: #FF4D4D !important;
+  }
+
+  /* D-Pad */
+  .dpad { width: 156px; height: 156px; position: relative; }
+  .dpad .b { position: absolute; width: 48px; height: 48px; border-radius: 14px; font-size: 14px; }
+  .d-up { top: 0; left: 50%; transform: translateX(-50%); border-radius: 16px 16px 10px 10px; }
+  .d-dn { bottom: 0; left: 50%; transform: translateX(-50%); border-radius: 10px 10px 16px 16px; }
+  .d-lt { top: 50%; left: 0; transform: translateY(-50%); border-radius: 16px 10px 10px 16px; }
+  .d-rt { top: 50%; right: 0; transform: translateY(-50%); border-radius: 10px 16px 16px 10px; }
+  .d-ok {
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 54px; height: 54px; border-radius: 50%;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
+    background: linear-gradient(160deg, #383838, #1e1e1e);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.4);
+  }
+  .dpad::before {
+    content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 128px; height: 128px; border-radius: 50%;
+    border: 0.5px solid rgba(255,255,255,0.04); pointer-events: none;
+  }
+
+  .row { display: flex; gap: 5px; width: 100%; justify-content: center; }
+  .vol-b { width: 56px; height: 32px; border-radius: 10px; font-size: 16px; font-weight: 600; }
+  .vol-mid { width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #555; font-weight: 700; }
+  .nav-b { flex: 1; height: 30px; border-radius: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; }
+  .mute-b { width: 116px; height: 30px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .med-b { width: 42px; height: 30px; border-radius: 8px; font-size: 13px; }
+  .app-b { flex: 1; height: 32px; border-radius: 10px; font-size: 0; padding: 0; }
+  .app-b svg { height: 16px; width: auto; }
+  .app-b.nf svg { height: 13px; }
+  .app-b.yt:hover, .app-b.yt.flash { color: #FF0000 !important; }
+  .app-b.nf:hover, .app-b.nf.flash { color: #E50914 !important; }
+  .sep { width: 50px; height: 0.5px; background: rgba(255,255,255,0.05); }
+
+  /* ══════ RIGHT PANEL ══════ */
+  .panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    -webkit-app-region: drag;
+  }
+
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 22px 18px;
+    min-height: 58vh;
+    gap: 0;
+  }
+
+  .hero-line {
+    display: block;
+    line-height: 1.15;
+    background: linear-gradient(135deg, #FF4D4D, #FF6B3D);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 12px rgba(255,60,40,0.15));
+    text-align: center;
+  }
+
+  .h-what {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    font-size: 40px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .h-will {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 38px;
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: 0.5px;
+  }
+
+  .h-you {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", system-ui, sans-serif;
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .h-watch {
+    font-family: "Snell Roundhand", "Brush Script MT", "Apple Chancery", cursive;
+    font-size: 52px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    line-height: 1.0;
+    padding: 2px 0;
+    -webkit-text-fill-color: transparent;
+    background: linear-gradient(135deg, #FF6B3D, #FF4D4D);
+    -webkit-background-clip: text;
+  }
+
+  .h-today {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    font-size: 32px;
+    font-weight: 300;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    -webkit-text-fill-color: transparent;
+    background: linear-gradient(135deg, #FF4D4D 30%, #FF6B3D);
+    -webkit-background-clip: text;
+    opacity: 0.7;
+  }
+
+  .kb {
+    padding: 12px 22px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    -webkit-app-region: no-drag;
+  }
+
+  .ti {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 0.5px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: #e0e0e0;
+    font-size: 13px;
+    outline: none;
+    caret-color: #FF4D4D;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .ti:focus { border-color: rgba(255,77,77,0.35); box-shadow: 0 0 0 3px rgba(255,77,77,0.07); }
+  .ti::placeholder { color: #555; }
+
+  .kb-btns { display: flex; gap: 4px; }
+  .kb-b { flex: 1; height: 30px; border-radius: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
+  .kb-b.send {
+    background: linear-gradient(160deg, #FF5E4D, #CC3328) !important;
+    color: white !important;
+    box-shadow:
+      0 3px 6px rgba(0,0,0,0.5),
+      0 1px 2px rgba(0,0,0,0.3),
+      0 0 10px rgba(255,77,77,0.1),
+      inset 0 1px 0 rgba(255,255,255,0.2),
+      inset 0 -1px 0 rgba(0,0,0,0.3) !important;
+  }
+  .kb-b.send:hover {
+    background: linear-gradient(160deg, #FF6B5A, #DD3A2F) !important;
+    color: white !important;
+    box-shadow:
+      0 4px 8px rgba(0,0,0,0.6),
+      0 0 14px rgba(255,77,77,0.2),
+      inset 0 1px 0 rgba(255,255,255,0.25),
+      inset 0 -1px 0 rgba(0,0,0,0.3) !important;
+  }
+  .kb-b.send:active, .kb-b.send.flash {
+    background: linear-gradient(160deg, #BB2A20, #DD3A2F) !important;
+    color: white !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.4) !important;
+  }
+
+  .spacer { flex: 1; }
+
+  .footer {
+    padding: 8px 16px 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    -webkit-app-region: no-drag;
+    border-top: 0.5px solid rgba(255,255,255,0.05);
+    position: relative;
+    z-index: 2;
+  }
+  .ft-item { display: flex; align-items: center; gap: 4px; }
+  .ft-item svg { width: 14px; height: 14px; opacity: 0.35; }
+  .ft-val { font-size: 13px; color: #555; font-weight: 600; }
+  .ft-val.on { color: #30D158; }
+  .ft-val.off { color: #FF4D4D; }
+  .ft-spacer { flex: 1; }
+  .ft-btn { background: none; border: none; color: #333; font-size: 13px; cursor: pointer; padding: 3px 6px; border-radius: 4px; transition: color 0.1s; }
+  .ft-btn:hover { color: #666; }
+
+  /* Keybinds overlay */
+  .kb-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 50;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .kb-overlay.on { display: flex; }
+
+  .kb-card {
+    background: linear-gradient(165deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 0.5px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 24px 28px;
+    max-width: 320px;
+    width: 100%;
+    cursor: default;
+  }
+
+  .kb-card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #999;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .kb-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 0.5px solid rgba(255,255,255,0.04);
+  }
+
+  .kb-row:last-child { border-bottom: none; }
+
+  .kb-action { font-size: 13px; color: #888; }
+
+  .kb-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .kb-key kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.08);
+    border: 0.5px solid rgba(255,255,255,0.1);
+    font-size: 11px;
+    font-family: -apple-system, system-ui, sans-serif;
+    color: #bbb;
+    font-weight: 500;
+  }
+
+  .kb-hint {
+    text-align: center;
+    font-size: 11px;
+    color: #444;
+    margin-top: 16px;
+  }
+
+  .ft-status {
+    font-size: 11px;
+    color: #444;
+    font-weight: 600;
+    transition: color 0.2s;
+    white-space: nowrap;
+  }
+  .ft-status.active { color: #777; }
+
+  /* ══════ SETUP SCREEN ══════ */
+  .setup {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: #050505;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .setup.hidden { display: none; }
+
+  /* Same gradient + grain as main */
+  .setup::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 40% 50%, rgba(255,60,40,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse at 70% 25%, rgba(255,77,77,0.10) 0%, transparent 45%),
+      radial-gradient(ellipse at 30% 80%, rgba(255,107,61,0.07) 0%, transparent 45%);
+    pointer-events: none;
+  }
+
+  .setup::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='300' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.5'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    background-repeat: repeat;
+    opacity: 0.4;
+    mask-image:
+      radial-gradient(ellipse at 40% 50%, black 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 25%, black 0%, transparent 50%);
+    -webkit-mask-image:
+      radial-gradient(ellipse at 40% 50%, black 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 25%, black 0%, transparent 50%);
+  }
+
+  .s-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    padding: 0 40px;
+    text-align: center;
+  }
+
+  /* Big hero text — same style as main screen */
+  .s-line {
+    display: block;
+    line-height: 1.15;
+    background: linear-gradient(135deg, #FF4D4D, #FF6B3D);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 12px rgba(255,60,40,0.15));
+  }
+
+  .s-l1 {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    font-size: 38px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .s-l2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 36px;
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  .s-l3 {
+    font-family: "Snell Roundhand", "Brush Script MT", "Apple Chancery", cursive;
+    font-size: 46px;
+    font-weight: 700;
+    line-height: 1.0;
+    padding: 2px 0;
+    background: linear-gradient(135deg, #FF6B3D, #FF4D4D);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .s-l4 {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    font-size: 30px;
+    font-weight: 300;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  /* Subtle status text below hero */
+  .s-status {
+    margin-top: 24px;
+    font-size: 13px;
+    color: #666;
+    min-height: 20px;
+    letter-spacing: 0.3px;
+  }
+
+  .s-status.err { color: #FF4D4D; }
+
+  /* Spinner */
+  .s-spin {
+    margin-top: 20px;
+    width: 24px; height: 24px;
+    border: 2px solid rgba(255,77,77,0.15);
+    border-top-color: #FF4D4D;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Device cards */
+  .s-devices {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .s-dev {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.04);
+    border: 0.5px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .s-dev:hover {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,77,77,0.25);
+    transform: translateY(-1px);
+  }
+
+  .s-dev .sd-name { font-size: 14px; font-weight: 600; }
+  .s-dev .sd-sub { font-size: 11px; color: #555; margin-top: 1px; }
+
+  /* PIN input */
+  .s-pin {
+    margin-top: 20px;
+    width: 180px;
+    background: rgba(255,255,255,0.04);
+    border: 0.5px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: #e0e0e0;
+    font-size: 28px;
+    font-weight: 800;
+    text-align: center;
+    letter-spacing: 12px;
+    outline: none;
+    caret-color: #FF4D4D;
+  }
+
+  .s-pin:focus {
+    border-color: rgba(255,77,77,0.4);
+    box-shadow: 0 0 0 4px rgba(255,77,77,0.08);
+  }
+
+  .s-pin::placeholder { color: #2a2a2a; letter-spacing: 8px; font-size: 18px; }
+
+  /* IP input */
+  .s-ip {
+    margin-top: 16px;
+    width: 220px;
+    background: rgba(255,255,255,0.04);
+    border: 0.5px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: #e0e0e0;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 1px;
+    outline: none;
+    caret-color: #FF4D4D;
+  }
+
+  .s-ip:focus {
+    border-color: rgba(255,77,77,0.4);
+    box-shadow: 0 0 0 4px rgba(255,77,77,0.08);
+  }
+
+  .s-ip::placeholder { color: #333; }
+
+  /* 3D buttons matching remote style */
+  .s-btn {
+    margin-top: 16px;
+    padding: 12px 32px;
+    border-radius: 12px;
+    border: none;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    background: linear-gradient(160deg, #FF5E4D, #CC3328);
+    color: white;
+    box-shadow:
+      0 3px 6px rgba(0,0,0,0.5),
+      0 0 10px rgba(255,77,77,0.1),
+      inset 0 1px 0 rgba(255,255,255,0.2),
+      inset 0 -1px 0 rgba(0,0,0,0.3);
+    transition: all 0.1s;
+  }
+
+  .s-btn:hover {
+    box-shadow: 0 4px 10px rgba(0,0,0,0.6), 0 0 16px rgba(255,77,77,0.2), inset 0 1px 0 rgba(255,255,255,0.25);
+    transform: translateY(-1px);
+  }
+
+  .s-btn:active {
+    background: linear-gradient(160deg, #BB2A20, #DD3A2F);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.4);
+    transform: translateY(0);
+  }
+
+  .s-btn.dark {
+    background: linear-gradient(160deg, #2c2c2c, #1a1a1a);
+    color: #999;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.09), inset 0 -1px 0 rgba(0,0,0,0.4);
+  }
+
+  .s-btn.dark:hover { color: #ccc; }
+
+  .s-btns { display: flex; gap: 10px; margin-top: 16px; }
+
+  /* Success check */
+  .s-check {
+    font-size: 48px;
+    margin-bottom: 8px;
+  }
+
+  /* Custom title bar */
+  .titlebar {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-app-region: drag;
+    background: transparent;
+    border-bottom: 0.5px solid rgba(255,255,255,0.04);
+    z-index: 2;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .titlebar-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #444;
+    letter-spacing: 0.3px;
+  }
+
+  .titlebar-close {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #FF5F57;
+    border: none;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+    transition: opacity 0.15s;
+  }
+
+  .titlebar-close:hover { opacity: 0.8; }
+
+  .titlebar-minimize {
+    position: absolute;
+    left: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #FEBC2E;
+    border: none;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+    transition: opacity 0.15s;
+  }
+
+  .titlebar-minimize:hover { opacity: 0.8; }
+</style>
+</head>
+<body>
+
+<div class="titlebar">
+  <button class="titlebar-close" onclick="closeWin()" title="Close"></button>
+  <button class="titlebar-minimize" onclick="minimizeWin()" title="Minimize"></button>
+  <span class="titlebar-text">Remote</span>
+</div>
+
+<!-- Setup Screen -->
+<div class="setup" id="setupScreen">
+  <div class="s-content" id="setupContent">
+    <span class="s-line s-l1">let's</span>
+    <span class="s-line s-l2">find</span>
+    <span class="s-line s-l3">your</span>
+    <span class="s-line s-l4">TV</span>
+    <div class="s-spin"></div>
+  </div>
+</div>
+
+<div class="main" id="mainScreen">
+<div class="remote-wrap">
+  <div class="remote">
+    <div class="remote-top">
+      <div class="ir-led" id="irLed"></div>
+      <button class="b pwr" id="btn-power" onclick="fire('power_toggle','btn-power')">&#9211;</button>
+    </div>
+    <div class="dpad">
+      <button class="b d-up" id="btn-up" onclick="fire('send_key','btn-up',{key:'up'})">&#9650;</button>
+      <button class="b d-lt" id="btn-left" onclick="fire('send_key','btn-left',{key:'left'})">&#9664;</button>
+      <button class="b d-ok" id="btn-ok" onclick="fire('send_key','btn-ok',{key:'ok'})">OK</button>
+      <button class="b d-rt" id="btn-right" onclick="fire('send_key','btn-right',{key:'right'})">&#9654;</button>
+      <button class="b d-dn" id="btn-down" onclick="fire('send_key','btn-down',{key:'down'})">&#9660;</button>
+    </div>
+    <div class="row">
+      <button class="b nav-b" id="btn-back" onclick="fire('send_key','btn-back',{key:'back'})">Back</button>
+      <button class="b nav-b" id="btn-home" onclick="fire('send_key','btn-home',{key:'home'})">Home</button>
+      <button class="b nav-b" id="btn-menu" onclick="fire('send_key','btn-menu',{key:'menu'})">Menu</button>
+    </div>
+    <div class="sep"></div>
+    <div class="row">
+      <button class="b vol-b" id="btn-vdn" onclick="fire('volume_down','btn-vdn')">−</button>
+      <div class="vol-mid" id="volLabel">VOL</div>
+      <button class="b vol-b" id="btn-vup" onclick="fire('volume_up','btn-vup')">+</button>
+    </div>
+    <button class="b mute-b" id="btn-mute" onclick="fire('mute_toggle','btn-mute')">Mute</button>
+    <div class="sep"></div>
+    <div class="row">
+      <button class="b med-b" id="btn-play" onclick="fire('media_resume','btn-play')">&#9654;</button>
+      <button class="b med-b" id="btn-pause" onclick="fire('media_pause','btn-pause')">&#10074;&#10074;</button>
+      <button class="b med-b" id="btn-stop" onclick="fire('media_stop','btn-stop')">&#9632;</button>
+    </div>
+    <div class="sep"></div>
+    <div class="row">
+      <button class="b app-b yt" id="btn-yt" onclick="fire('launch_app','btn-yt',{app:'YouTube'})">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.5V8.5l6.3 3.5-6.3 3.5z"/></svg>
+      </button>
+      <button class="b app-b nf" id="btn-nf" onclick="fire('launch_app','btn-nf',{app:'Netflix'})">
+        <svg viewBox=".238 .034 919.406 248.488" fill="currentColor"><path d="m870.46 118.314 49.184 130.208c-14.495-2.07-28.982-4.663-43.733-6.999l-27.707-71.945-28.468 66.006c-13.973-2.336-27.698-3.114-41.672-4.928l49.955-113.89-45.309-116.732h41.937l25.362 65.22 27.185-65.22h42.442zm-120.864-118.28h-38.052v225.71c12.425.779 25.362 1.292 38.052 2.841zm-70.927 223.118c-34.68-2.328-69.37-4.39-104.829-5.177v-217.94h38.823v181.188c22.264.514 44.52 2.32 66.006 3.355zm-146.252-134.847v38.822h-53.06v88.263h-38.3v-215.356h108.713v38.822h-70.405v49.45h53.06zm-156.597-49.449v178.605c-12.946 0-26.14 0-38.83.514v-179.119h-40.122v-38.822h119.322v38.822zm-120.88 90.334c-17.08 0-37.274 0-51.769.787v57.715c22.778-1.557 45.556-3.363 68.59-4.141v37.273l-107.412 8.548v-229.338h107.405v38.822h-68.584v52.29c15.017 0 38.052-.778 51.768-.778v38.83zm-215.109-21.743v135.633c-13.965 1.557-26.398 3.371-39.593 5.442v-248.488h37.017l50.469 141.076v-141.076h38.83v232.436c-13.717 2.336-27.698 3.114-42.45 5.177z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="hero">
+    <span class="hero-line h-what">What</span>
+    <span class="hero-line h-will">will</span>
+    <span class="hero-line h-you">you</span>
+    <span class="hero-line h-watch">watch</span>
+    <span class="hero-line h-today">today?</span>
+  </div>
+
+  <div class="kb">
+    <input type="text" class="ti" id="tvInput" placeholder="Start typing..." autocomplete="off" spellcheck="false" autofocus>
+    <div class="kb-btns">
+      <button class="b kb-b send" id="btn-send" onclick="fire('_type','btn-send')">Send</button>
+      <button class="b kb-b" id="btn-clear" onclick="fire('_clear','btn-clear')">Clear</button>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+</div>
+</div>
+
+<div class="footer">
+    <div class="ft-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>
+      <span class="ft-val" id="ftPwr">—</span>
+    </div>
+    <div class="ft-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8.1v7.8a4.47 4.47 0 0 0 2.5-3.9zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1A9 9 0 0 0 14 3.2z"/></svg>
+      <span class="ft-val" id="ftVol">—</span>
+    </div>
+    <div class="ft-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+      <span class="ft-val" id="ftApp">Home</span>
+    </div>
+    <div class="ft-spacer"></div>
+    <span class="ft-status" id="ftStatus"></span>
+    <button class="ft-btn" onclick="toggleKeybinds()" title="Keybinds">&#8984;</button>
+    <button class="ft-btn" onclick="refreshStatus()" title="Refresh">&#8635;</button>
+  </div>
+
+<div class="kb-overlay" id="kbOverlay" onclick="toggleKeybinds()">
+  <div class="kb-card" onclick="event.stopPropagation()">
+    <h3>Keybinds</h3>
+    <div class="kb-row"><span class="kb-action">Navigate</span><span class="kb-key"><kbd>&#8593;</kbd><kbd>&#8595;</kbd><kbd>&#8592;</kbd><kbd>&#8594;</kbd></span></div>
+    <div class="kb-row"><span class="kb-action">OK / Select</span><span class="kb-key"><kbd>Enter</kbd></span></div>
+    <div class="kb-row"><span class="kb-action">Back</span><span class="kb-key"><kbd>&#9003;</kbd></span></div>
+    <div class="kb-row"><span class="kb-action">Home</span><span class="kb-key"><kbd>Esc</kbd></span></div>
+    <div class="kb-row"><span class="kb-action">Play / Resume</span><span class="kb-key"><kbd>Space</kbd></span></div>
+    <div class="kb-hint">Click anywhere to close</div>
+  </div>
+</div>
+</div>
+
+
+<script>
+const tvInput = document.getElementById('tvInput');
+const volLabel = document.getElementById('volLabel');
+const ftStatus = document.getElementById('ftStatus');
+const irLed = document.getElementById('irLed');
+let api = null, irTimer = null;
+
+function toggleKeybinds() {
+  document.getElementById('kbOverlay').classList.toggle('on');
+}
+
+async function closeWin() {
+  if (api) await api.close_window();
+}
+
+async function minimizeWin() {
+  if (api) await api.minimize_window();
+}
+
+async function waitApi() {
+  while (!window.pywebview?.api) await new Promise(r => setTimeout(r, 50));
+  api = window.pywebview.api;
+}
+
+function blinkIR() {
+  irLed.classList.add('glow');
+  clearTimeout(irTimer);
+  irTimer = setTimeout(() => irLed.classList.remove('glow'), 250);
+}
+
+function flash(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 180);
+  blinkIR();
+}
+
+async function fire(action, btnId, data) {
+  flash(btnId);
+  if (action === '_type') return typeOnTv();
+  if (action === '_clear') return clearTvText();
+  await cmd(action, data);
+}
+
+async function cmd(action, data) {
+  if (!api) return;
+  let res;
+  if (action === 'media_pause') res = await api.media_pause();
+  else if (action === 'media_resume') res = await api.media_resume();
+  else if (action === 'media_stop') res = await api.media_stop();
+  else if (action === 'volume_up') { res = await api.volume_up(2); if(res?.volume!=null) { volLabel.textContent=res.volume; document.getElementById('ftVol').textContent=res.volume; } }
+  else if (action === 'volume_down') { res = await api.volume_down(2); if(res?.volume!=null) { volLabel.textContent=res.volume; document.getElementById('ftVol').textContent=res.volume; } }
+  else if (action === 'mute_toggle') res = await api.mute();
+  else if (action === 'power_toggle') res = await api.power_toggle();
+  else if (action === 'launch_app') { res = await api.launch_app(data?.app || ''); setTimeout(refreshStatus, 2000); }
+  else if (action === 'send_key') res = await api.send_key(data?.key || '');
+}
+
+tvInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); flash('btn-send'); typeOnTv(); } });
+
+async function typeOnTv() {
+  const text = tvInput.value.trim();
+  if (!text || !api) return;
+  tvInput.disabled = true;
+  toast('Typing...');
+  const res = await api.type_on_tv(text);
+  tvInput.disabled = false;
+  tvInput.value = '';
+  tvInput.focus();
+  toast(res?.ok ? 'Done' : 'Failed');
+}
+
+async function clearTvText() {
+  if (!api) return;
+  toast('Clearing...');
+  await api.clear_tv_text(30);
+  toast('Cleared');
+}
+
+async function refreshStatus() {
+  if (!api) return;
+  const s = await api.tv_status();
+  const pw = document.getElementById('ftPwr');
+  const vl = document.getElementById('ftVol');
+  const fa = document.getElementById('ftApp');
+  if (s?.power===true) { pw.textContent='On'; pw.className='ft-val on'; }
+  else if (s?.power===false) { pw.textContent='Off'; pw.className='ft-val off'; }
+  if (s?.volume!=null) { vl.textContent=s.volume; volLabel.textContent=s.volume; }
+  const app = s?.app || '';
+  const al = app.toLowerCase();
+  const isHome = !app || al.includes('smartcast') || al.includes('home') || app==='_NO_APP_RUNNING';
+  if (fa) fa.textContent = isHome ? 'Home' : app;
+}
+
+const keyMap = {
+  'ArrowUp':    { a:'send_key', b:'btn-up',    d:{key:'up'} },
+  'ArrowDown':  { a:'send_key', b:'btn-down',  d:{key:'down'} },
+  'ArrowLeft':  { a:'send_key', b:'btn-left',  d:{key:'left'} },
+  'ArrowRight': { a:'send_key', b:'btn-right', d:{key:'right'} },
+  'Enter':      { a:'send_key', b:'btn-ok',    d:{key:'ok'} },
+  'Backspace':  { a:'send_key', b:'btn-back',  d:{key:'back'} },
+  'Escape':     { a:'send_key', b:'btn-home',  d:{key:'home'} },
+  ' ':          { a:'media_resume', b:'btn-play' },
+};
+
+document.addEventListener('keydown', e => {
+  if (document.activeElement === tvInput) return;
+  const m = keyMap[e.key];
+  if (m) { e.preventDefault(); flash(m.b); cmd(m.a, m.d); }
+});
+
+let statusTimer;
+function toast(msg) {
+  ftStatus.textContent = msg;
+  ftStatus.classList.add('active');
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => { ftStatus.classList.remove('active'); ftStatus.textContent = ''; }, 3000);
+}
+
+// ── Setup flow ──
+const setupScreen = document.getElementById('setupScreen');
+const setupContent = document.getElementById('setupContent');
+const mainScreen = document.getElementById('mainScreen');
+
+function showSetup() { setupScreen.style.display = 'flex'; mainScreen.style.display = 'none'; }
+function showMain() { setupScreen.style.display = 'none'; mainScreen.style.display = 'flex'; }
+
+function S(html) { setupContent.innerHTML = html; }
+
+async function setupStart() {
+  S(`
+    <span class="s-line s-l1">let's</span>
+    <span class="s-line s-l2">find</span>
+    <span class="s-line s-l3">your</span>
+    <span class="s-line s-l4">TV</span>
+    <div class="s-spin"></div>
+    <div class="s-status">Scanning your network...</div>
+  `);
+  const devices = await api.discover_tvs();
+  if (!devices.length || devices[0]?.error) {
+    S(`
+      <span class="s-line s-l1">no TV</span>
+      <span class="s-line s-l3">found</span>
+      <div class="s-status">make sure it's on and on the same network</div>
+      <div class="s-btns">
+        <button class="s-btn" onclick="setupStart()">Try Again</button>
+        <button class="s-btn dark" onclick="setupManualIp()">Enter IP</button>
+      </div>
+    `);
+    return;
+  }
+  S(`
+    <span class="s-line s-l2">select</span>
+    <span class="s-line s-l1">your TV</span>
+    <div class="s-devices">
+      ${devices.map(d => `
+        <div class="s-dev" onclick="setupPair('${d.ip}', ${d.port})">
+          <div><div class="sd-name">${d.name || 'Vizio TV'}</div><div class="sd-sub">${d.ip}</div></div>
+        </div>
+      `).join('')}
+    </div>
+  `);
+}
+
+function setupManualIp() {
+  S(`
+    <span class="s-line s-l1">enter</span>
+    <span class="s-line s-l3">IP</span>
+    <span class="s-line s-l4">address</span>
+    <input type="text" class="s-ip" id="manualIp" placeholder="10.0.0.170">
+    <button class="s-btn" onclick="setupPair(document.getElementById('manualIp').value, 7345)">Connect</button>
+  `);
+  setTimeout(() => {
+    const el = document.getElementById('manualIp');
+    el?.focus();
+    el?.addEventListener('keydown', e => { if (e.key === 'Enter') setupPair(el.value, 7345); });
+  }, 100);
+}
+
+async function setupPair(ip, port) {
+  S(`
+    <span class="s-line s-l2">connecting</span>
+    <span class="s-line s-l1">to TV</span>
+    <div class="s-status">${ip}</div>
+    <div class="s-spin"></div>
+  `);
+  const res = await api.start_pairing(ip, port);
+  if (!res?.ok) {
+    S(`
+      <span class="s-line s-l1">could not</span>
+      <span class="s-line s-l3">connect</span>
+      <div class="s-status err">${res?.error || 'TV not reachable'}</div>
+      <div class="s-btns">
+        <button class="s-btn" onclick="setupStart()">Retry</button>
+        <button class="s-btn dark" onclick="setupManualIp()">Enter IP</button>
+      </div>
+    `);
+    return;
+  }
+  S(`
+    <span class="s-line s-l2">check</span>
+    <span class="s-line s-l1">your TV</span>
+    <span class="s-line s-l4">for a PIN</span>
+    <input type="text" class="s-pin" id="pinInput" placeholder="0000" maxlength="4" inputmode="numeric">
+    <button class="s-btn" onclick="setupFinishPair()">Pair</button>
+  `);
+  setTimeout(() => {
+    const el = document.getElementById('pinInput');
+    el?.focus();
+    el?.addEventListener('keydown', e => { if (e.key === 'Enter') setupFinishPair(); });
+  }, 100);
+}
+
+async function setupFinishPair() {
+  const pin = document.getElementById('pinInput')?.value?.trim();
+  if (!pin) return;
+  S(`
+    <span class="s-line s-l2">pairing</span>
+    <span class="s-line s-l3">...</span>
+    <div class="s-spin"></div>
+  `);
+  const res = await api.finish_pairing(pin);
+  if (!res?.ok) {
+    S(`
+      <span class="s-line s-l1">pairing</span>
+      <span class="s-line s-l3">failed</span>
+      <div class="s-status err">${res?.error || 'Wrong PIN'}</div>
+      <button class="s-btn" onclick="setupStart()">Try Again</button>
+    `);
+    return;
+  }
+  S(`
+    <span class="s-line s-l2">finding</span>
+    <span class="s-line s-l3">cast</span>
+    <span class="s-line s-l4">device</span>
+    <div class="s-spin"></div>
+  `);
+  const cast = await api.discover_cast();
+  if (cast.length && !cast[0]?.error) {
+    if (cast.length === 1) {
+      await api.save_cast_name(cast[0].name);
+      setupDone(cast[0].name);
+    } else {
+      S(`
+        <span class="s-line s-l2">select</span>
+        <span class="s-line s-l1">cast device</span>
+        <div class="s-devices">
+          ${cast.map(d => `
+            <div class="s-dev" onclick="setupPickCast('${d.name.replace(/'/g, "\\'")}')">
+              <div class="sd-name">${d.name}</div>
+                </div>
+          `).join('')}
+        </div>
+      `);
+    }
+  } else {
+    setupDone('');
+  }
+}
+
+async function setupPickCast(name) {
+  await api.save_cast_name(name);
+  setupDone(name);
+}
+
+function setupDone(castName) {
+  S(`
+    <span class="s-check">✓</span>
+    <span class="s-line s-l2">you're</span>
+    <span class="s-line s-l1">all set</span>
+    ${castName ? `<div class="s-status">${castName}</div>` : ''}
+    <button class="s-btn" onclick="showMain(); refreshStatus();">Start</button>
+  `);
+}
+
+// ── Init ──
+waitApi().then(async () => {
+  const configured = await api.is_configured();
+  if (configured) {
+    showMain();
+    refreshStatus();
+    setInterval(refreshStatus, 8000);
+  } else {
+    showSetup();
+    setupStart();
+  }
+});
+</script>
+</body>
+</html>
